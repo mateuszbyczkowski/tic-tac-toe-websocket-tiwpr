@@ -1,35 +1,48 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Tic Tac Toe</title>
+    <title>T-T-T - multiplayer</title>
     <link rel="stylesheet" href="main.css">
-    <link rel="stylesheet" href="node_modules/skeleton-css/css/skeleton.css">
+    <link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css">
 </head>
-<body>
-<div>
-    <div class="menu">
-        <h1>Tic - Tac - Toe</h1>
-        <h3>How To Play</h3>
-        <ol>
-            <li>Player 1 Create a new game by entering the username</li>
-            <li>Player 2 Enter another username and the room id that is displayed on first window.</li>
-            <li>Click on join game.</li>
-        </ol>
-        <h4>Create a new Game</h4>
-        <input type="text" name="name" id="nameNew" placeholder="Enter your name" required>
-        <button id="new">New Game</button>
-        <br><br>
-        <h4>Join an existing game</h4>
-        <input type="text" name="name" id="nameJoin" placeholder="Enter your name" required>
-        <input type="text" name="room" id="room" placeholder="Enter Game ID" required>
-        <button id="join">Join Game</button>
-    </div>
 
-    <div class="gameBoard">
-        <h2 id="userHello"></h2>
-        <h3 id="turn"></h3>
-        <div id="tic-tac-toe"></div>
+<body>
+<div class="container" style="margin-top: 40px">
+    <h3>Tic - Tac - Toe multiplayer</h3>
+    <h4>How To Play</h4>
+    <ol>
+        <li>First player create a new game by entering the username</li>
+        <li>Another player enter his own username and room id that is displayed on first window</li>
+        <li>Click on join game</li>
+    </ol>
+    <hr/>
+    <div class="row">
+        <div class="col-sm-6">
+            <h5>Create a new Game</h5>
+            <div class="form-group">
+                <input type="text" name="name" id="nameNew" placeholder="Enter your name" required>
+                <button id="new" class="btn btn-primary">New Game</button>
+            </div>
+            <br><br>
+        </div>
+        <div class="col-sm-6">
+            <h4>Join an existing game</h4>
+            <div class="form-group">
+                <input type="text" name="name" id="nameJoin" placeholder="Enter your name" required>
+                <input type="text" name="room" id="room" placeholder="Enter Game ID" required>
+                <button id="join" class="btn btn-primary">Join Game</button>
+            </div>
+        </div>
     </div>
+    <hr/>
+</div>
+
+<div class="gameBoard col-sm-6"
+     style="border: 1px gray solid; padding: 100px; padding-left: 200px; paddin-top: 50px;">
+    <h3 id="userHello"></h3>
+    <h4 id="turn" class="alert alert-warning"></h4>
+    <div id="tic-tac-toe" style="padding: 40px"></div>
+    <button id="exit" class="btn btn-primary">Close game</button>
 </div>
 
 <script src="node_modules/jquery/dist/jquery.min.js"></script>

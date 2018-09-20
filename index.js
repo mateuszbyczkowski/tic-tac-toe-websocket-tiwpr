@@ -23,7 +23,7 @@ io.on('connection', (socket) => {
 
     // Connect the Player 2 to the room he requested. Show error if room full.
     socket.on('joinGame', function (data) {
-        var room = io.nsps['/'].adapter.rooms[data.room];
+        let room = io.nsps['/'].adapter.rooms[data.room];
         if (room && room.length === 1) {
             socket.join(data.room);
             socket.broadcast.to(data.room).emit('player1', {});
@@ -33,9 +33,6 @@ io.on('connection', (socket) => {
         }
     });
 
-    /**
-     * Handle the turn played by either player and notify the other.
-     */
     socket.on('playTurn', (data) => {
         socket.broadcast.to(data.room).emit('turnPlayed', {
             squares: data.squares,
@@ -45,9 +42,6 @@ io.on('connection', (socket) => {
         });
     });
 
-    /**
-     * Notify the players about the victor.
-     */
     socket.on('gameEnded', (data) => {
         socket.broadcast.to(data.room).emit('gameEnd', data);
     });
