@@ -1,12 +1,12 @@
 (function startGame() {
-    const P1 = 'X';
-    const P2 = 'O';
+    const P1 = "X";
+    const P2 = "O";
     const GRID_THICKNESS = 5;
     const SOCKET = io.connect('http://localhost:5000');
     let player, game;
     let board, boardContext;
     let squares = [];
-    let score = {'X': 0, 'O': 0};
+    let score = {"X": 0, "O": 0};
 
     class Player {
         constructor(name, type) {
@@ -85,7 +85,6 @@
         getRoomId() {
             return this.roomId;
         }
-
         announceWinner() {
             const message = `${player.getPlayerName()} wins!`;
             SOCKET.emit('gameEnded', {
@@ -143,7 +142,21 @@
         square.paint = squarePainters[player.getPlayerType()];
         drawTicTacToeBoard();
         checkForWin(square);
+        let paints = squares.map(square => square.paint.name);
+        SOCKET.emit('playTurn', {
+            squares: squares,
+            score: score,
+            room: game.getRoomId(),
+            paints: paints
+        });
 
+        saveCurrentTurnPlayToStorage(paints);
+        player.setCurrentTurn(false);
+        board.onclick = setCanvasListener;
+    };
+
+    const continueTurn = function () {
+        let paints = squares.map(square => square.paint.name);
         SOCKET.emit('playTurn', {
             squares: squares,
             score: score,
@@ -151,6 +164,7 @@
             paints: squares.map(square => square.paint.name)
         });
 
+        saveCurrentTurnPlayToStorage(paints);
         player.setCurrentTurn(false);
         board.onclick = setCanvasListener;
     };
@@ -186,7 +200,7 @@
                 (board.height / 3) - (GRID_THICKNESS << 1));
         },
 
-        'X': function (x, y) {
+        "X": function (x, y) {
             boardContext.save();
             boardContext.lineWidth = 5;
             boardContext.strokeStyle = "rgb(0, 0, 120)";
@@ -207,7 +221,7 @@
             boardContext.restore();
         },
 
-        'O': function (x, y) {
+        "O": function (x, y) {
             boardContext.save();
             boardContext.lineWidth = 4;
             boardContext.strokeStyle = "rgb(0, 120, 0)";
@@ -226,6 +240,17 @@
     };
 
     const drawTicTacToeBoard = function () {
+        boardContext.clearRect(0, 0, board.width, board.height);
+        drawTicTacToeGrid();
+        drawSquares();
+    };
+
+    const drawOldTicTacToeBoard = function (message) {
+        $('.container').css('display', 'none');
+        $('.gameBoard').css('display', 'block');
+        $('#userHello').html(message);
+        game.setCanvasBoard();
+        document.getElementById('tic-tac-toe').appendChild(board);
         boardContext.clearRect(0, 0, board.width, board.height);
         drawTicTacToeGrid();
         drawSquares();
@@ -300,9 +325,95 @@
         return {'x': x, 'y': y};
     };
 
+    const saveCurrentTurnPlayToStorage = function (paints) {
+        sessionStorage.setItem('squares', JSON.stringify(squares));
+        sessionStorage.setItem('score', JSON.stringify(score));
+        sessionStorage.setItem('paints', JSON.stringify(paints));
+        sessionStorage.setItem('roomId', game.getRoomId());
+        sessionStorage.setItem('userName', player.getPlayerName());
+        if (player.getPlayerType() === P1) {
+            sessionStorage.setItem('currentPlayer', P2);
+        } else if (player.getPlayerType() === P2) {
+            sessionStorage.setItem('currentPlayer', P1);
+        }
+    };
+
+    const recallCurrentTurnPlayedFromStorage = function () {
+        squares = JSON.parse(sessionStorage.getItem('squares'));
+        score = JSON.parse(sessionStorage.getItem('score'));
+        let paints = JSON.parse(sessionStorage.getItem('paints'));
+        let roomId = sessionStorage.getItem('roomId');
+        let currentPlayer = sessionStorage.getItem('currentPlayer');
+        let userName = sessionStorage.getItem('userName');
+
+        return {paints, roomId, currentPlayer, userName}
+    };
+
+    const onConnect = function (currentSocketId) {
+        //check if socketId exists in sessionStorage
+        if (sessionStorage.getItem('socket-id') == null
+            || sessionStorage.getItem('socket-id') === 'undefined') {
+            console.log("Putting socket.id to sessionStorage: " + currentSocketId);
+            sessionStorage.setItem('socket-id', currentSocketId);
+            //we are not in any game, we can easily create a new game
+        } else {
+            //if we have any connection in past check if we are in any game
+            SOCKET.emit('areWeInGame', sessionStorage.getItem('socket-id'));
+        }
+    };
     /**
      *  BEGIN SOCKET EVENTS
      */
+    //call it everytime main loads to request my current socketId
+    (function onConnect() {
+        SOCKET.emit('returnMySocketId', ({}));
+        console.log('Requested your socketId');
+    }());
+
+    //take my socketId from server
+    SOCKET.on('mySocketId', (socketId) => {
+        onConnect(socketId);
+    });
+
+    //recall board state from sessionStorage based on server info
+    SOCKET.on('recallBoardState', (room) => {
+        let recalledStorage = recallCurrentTurnPlayedFromStorage();
+        let paints = recalledStorage.paints;
+        let currentPlayer = recalledStorage.currentPlayer;
+        let userName = recalledStorage.userName;
+
+        game = new Game(room);
+        if (currentPlayer === P1) {
+            player = new Player(userName, P2);
+        } else if (currentPlayer === P2){
+            player = new Player(userName, P1);
+        }
+
+        for (let i = 0; i < squares.length; i++) {
+            squares[i].paint = squarePainters[paints[i]];
+        }
+
+        drawOldTicTacToeBoard(`Hello, ${player.getPlayerName()}`);
+
+        let countX = 0;
+        let countO = 0;
+        for (let i = 0; i < paints.length; i++) {
+            if (paints[i] === P1) {
+                countX++;
+            } else if (paints[i] === P2) {
+                countO++;
+            }
+        }
+
+        if (countX <= countO && currentPlayer === P1) {
+            player.setCurrentTurn(true);
+            continueTurn();
+        } else if (countX > countO && currentPlayer === P2) {
+            player.setCurrentTurn(true);
+            continueTurn();
+        }
+    });
+
     // Create a new game. Emit newGame event.
     $('#new').on('click', () => {
         const name = $('#nameNew').val();
@@ -310,7 +421,8 @@
             alert('Please enter your name.');
             return;
         }
-        SOCKET.emit('createGame', {name});
+        //we are always using old socketId
+        SOCKET.emit('createGame', {name, socketId: sessionStorage.getItem('socket-id')});
         player = new Player(name, P1);
     });
 
@@ -326,7 +438,8 @@
             alert('Please enter your name and game ID.');
             return;
         }
-        SOCKET.emit('joinGame', {name, room: roomID});
+        //we are always using old socketId
+        SOCKET.emit('joinGame', {name, room: roomID, socketId: sessionStorage.getItem('socket-id')});
         player = new Player(name, P2);
     });
 
@@ -369,12 +482,12 @@
         drawTicTacToeBoard();
         player.setCurrentTurn(true);
 
+        saveCurrentTurnPlayToStorage(paints);
         console.log('Turn played');
     });
 
     SOCKET.on('gameEnd', (data) => {
         game.endGame(data.message);
-        SOCKET.leave(data.room);
     });
 
     SOCKET.on('err', (data) => {
